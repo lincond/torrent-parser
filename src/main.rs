@@ -25,6 +25,47 @@ fn parse_byte_string(buffer: &[u8], cursor: &mut usize) -> String {
     result
 }
 
+fn parse_int(buffer: &[u8], cursor: &mut usize) -> i32 {
+    *cursor += 1; // consume 'i'
+
+    let mut digits_bytes = Vec::new();
+    let mut negative = false;
+
+    while buffer[*cursor]!= b'e' {
+        if buffer[*cursor] == b'-' {
+            negative = true;
+            *cursor += 1;
+            continue;
+        }
+        digits_bytes.push(buffer[*cursor]);
+        *cursor += 1;
+    }
+    *cursor += 1; // consume 'e'
+
+    let result = digits_bytes.iter().fold(0, |acc, &byte| {
+        acc * 10 + (byte - b'0') as usize
+    });
+    if negative {
+        return -(result as i32);
+    }
+
+    result as i32
+}
+
+//fn parse_list(buffer: &[u8], cursor: &mut usize) -> Vec<_> {
+//    let byte = buffer[*cursor];
+//    *cursor += 1; // consume 'l'
+//
+//    let list: Vec<_> = Vec::new();
+//    match byte {
+//        b'i' => {
+//            let integer = parse_int(buffer, cursor);
+//            list.push(sublist);
+//        }
+//    }
+//
+//}
+
 fn parse_dict(buffer: &[u8], cursor: &mut usize) {
     *cursor += 1;
 
