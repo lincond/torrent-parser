@@ -77,23 +77,19 @@ fn parse_list(buffer: &[u8], cursor: &mut usize) -> Vec<BencodeType> {
     while buffer[*cursor] != b'e' {
         match byte {
             b'i' => {
-                // println!("parse_list: integer found at position {cursor}");
                 let value = parse_int(buffer, cursor);
                 list.push(BencodeType::Integer(value));
             }, 
             b'l' => {
-                // println!("parse_list: list found at position {cursor}");
                 let value = parse_list(buffer, cursor);
                 list.push(BencodeType::List(value));
             },
             b'd' => {
-                // println!("parse_list: dict found at position {cursor}");
                 let value = parse_dict(buffer, cursor);
                 list.push(BencodeType::Dict(value));
             },
             _ => {
                 if byte.is_ascii_digit() {
-                    // println!("parse_list: byte_string found at position {cursor}");
                     let value = parse_byte_string(buffer, cursor);
                     list.push(BencodeType::ByteString(value.clone()));
                 } else {
@@ -115,18 +111,15 @@ fn parse_dict(buffer: &[u8], cursor: &mut usize) -> HashMap<String, BencodeType>
     while buffer[*cursor] != b'e' {
         let byte_string = parse_byte_string(buffer, cursor); 
         let key = byte_string_to_string(&byte_string);
-        // println!("key: {:?}", key);
 
         let byte = buffer[*cursor];
         match byte {
             b'i' => {
                 let value = parse_int(buffer, cursor);
-                // println!("value: {:?}", value);
                 dict.insert(key, BencodeType::Integer(value));
             },
             b'l' => {
                 let value = parse_list(buffer, cursor);
-                // println!("value: {:?}", value);
                 dict.insert(key, BencodeType::List(value));
             },
             b'd' => {
@@ -136,7 +129,6 @@ fn parse_dict(buffer: &[u8], cursor: &mut usize) -> HashMap<String, BencodeType>
             _ => {
                 if byte.is_ascii_digit() {
                     let value = parse_byte_string(buffer, cursor);
-                    // println!("value: {:?}", value);
                     dict.insert(key, BencodeType::ByteString(value));
                 } else {
                     println!("cursor: {}", byte as char);
@@ -186,7 +178,6 @@ fn parse_torrent_file(buffer: &[u8]) {
         match byte {
             b'd' => {
                 metainfo = parse_dict(buffer, &mut cursor);
-                // println!("{:?}", metainfo);
                 for (key, item) in metainfo.iter() {
                     print_bencode_item(key, item);
                 }
