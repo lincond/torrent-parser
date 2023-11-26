@@ -1,7 +1,9 @@
 use core::panic;
+use std::env;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
+use std::process::exit;
 use std::{println, todo};
 
 #[derive(Debug)]
@@ -203,8 +205,13 @@ fn parse_torrent_file(buffer: &[u8]) {
 
 
 fn main() {
-    let file_path = "ubuntu-20.04.6-desktop-amd64.iso.torrent";
+    let args: Vec<_> = env::args().collect();
+    if args.is_empty() {
+        println!("usage: torrent-parser <torrent file path>");
+        exit(1)
+    }
 
+    let file_path = &args[1];
     let mut file = File::open(file_path).expect("ERROR: cannot open the torrent file");
     let mut buffer = Vec::new();
 
