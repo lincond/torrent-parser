@@ -91,7 +91,6 @@ fn parse_list(buffer: &[u8], cursor: &mut usize) -> Vec<BencodeType> {
                     println!("parse_list: byte_string found at position {cursor}");
                     let value = parse_byte_string(buffer, cursor);
                     list.push(BencodeType::ByteString(value.clone()));
-                    println!("value: {:?}", value);
                 } else {
                     println!("cursor: {}", byte);
                     panic!("ERROR: unexpected byte while parse_list");
@@ -100,7 +99,6 @@ fn parse_list(buffer: &[u8], cursor: &mut usize) -> Vec<BencodeType> {
         }
     }
 
-    println!("consuming {}", buffer[*cursor] as char);
     *cursor += 1; // consume 'e'
     list
 }
@@ -142,7 +140,6 @@ fn parse_dict(buffer: &[u8], cursor: &mut usize) -> HashMap<String, BencodeType>
         }
     }
 
-    println!("dict consuming {}", buffer[*cursor] as char);
     *cursor += 1; // consume 'e'
     dict
 }
@@ -165,11 +162,13 @@ fn main() {
                 println!("dict found at position {cursor}:");
                 let dict = parse_dict(&buffer, &mut cursor);
                 println!("dict parsed: {:?}", dict);
-                println!("last pos: {}", buffer[cursor] as char);
+            },
+            b'\n' => {
+                println!("File parsed.");
+                break;
             },
             _ => {
-                println!("byte {} found at pos {}", buffer[cursor] as char, cursor);
-                todo!();
+                println!("unkown byte {} found at pos {}", buffer[cursor], cursor);
             }
         }
     }
