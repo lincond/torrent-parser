@@ -1,11 +1,22 @@
+use core::panic;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 use std::{println, todo};
 
+#[derive(Debug)]
+enum BencodeType {
+    Integer(i32),
+    List(Vec<BencodeType>),
+    Dict(HashMap<String, BencodeType>),
+    ByteString(String)
+}
+
 fn parse_byte_string(buffer: &[u8], cursor: &mut usize) -> String {
     let byte = buffer[*cursor];
     if !byte.is_ascii_digit() {
-        panic!("Unexpected byte while parsing dict: {byte}");
+        println!("last cursor pos: {cursor}");
+        panic!("Unexpected byte while parsing byte_string: {byte}");
     }
 
     let mut len_bytes = Vec::new();
@@ -19,7 +30,8 @@ fn parse_byte_string(buffer: &[u8], cursor: &mut usize) -> String {
         acc * 10 + (byte - b'0') as usize
     });
 
-    let result = String::from_utf8(buffer[*cursor..(*cursor +len)].to_vec()).expect("ERROR: unable to parse byte string");
+    let byte = buffer[*cursor] as char;
+    let result = String::from_utf8(buffer[*cursor..(*cursor +len)].to_vec()).unwrap_or_default();
     *cursor += len;
 
     result
@@ -52,37 +64,87 @@ fn parse_int(buffer: &[u8], cursor: &mut usize) -> i32 {
     result as i32
 }
 
-//fn parse_list(buffer: &[u8], cursor: &mut usize) -> Vec<_> {
-//    let byte = buffer[*cursor];
-//    *cursor += 1; // consume 'l'
-//
-//    let list: Vec<_> = Vec::new();
-//    match byte {
-//        b'i' => {
-//            let integer = parse_int(buffer, cursor);
-//            list.push(sublist);
-//        }
-//    }
-//
-//}
+fn parse_list(buffer: &[u8], cursor: &mut usize) -> Vec<BencodeType> {
+    *cursor += 1; // consume 'l'
 
-fn parse_dict(buffer: &[u8], cursor: &mut usize) {
+    let mut list: Vec<BencodeType> = Vec::new();
+    let byte = buffer[*cursor];
+    while buffer[*cursor] != b'e' {
+        match byte {
+            b'i' => {
+                println!("parse_list: integer found at position {cursor}");
+                let value = parse_int(buffer, cursor);
+                list.push(BencodeType::Integer(value));
+            }, 
+            b'l' => {
+                println!("parse_list: list found at position {cursor}");
+                let value = parse_list(buffer, cursor);
+                list.push(BencodeType::List(value));
+            },
+            b'd' => {
+                println!("parse_list: dict found at position {cursor}");
+                let value = parse_dict(buffer, cursor);
+                list.push(BencodeType::Dict(value));
+            },
+            _ => {
+                if byte.is_ascii_digit() {
+                    println!("parse_list: byte_string found at position {cursor}");
+                    let value = parse_byte_string(buffer, cursor);
+                    list.push(BencodeType::ByteString(value.clone()));
+                    println!("value: {:?}", value);
+                } else {
+                    println!("cursor: {}", byte);
+                    panic!("ERROR: unexpected byte while parse_list");
+                }
+            }
+        }
+    }
+
+    println!("consuming {}", buffer[*cursor] as char);
+    *cursor += 1; // consume 'e'
+    list
+}
+
+fn parse_dict(buffer: &[u8], cursor: &mut usize) -> HashMap<String, BencodeType> {
     *cursor += 1;
 
+    let mut dict: HashMap<String, BencodeType> = HashMap::new();
     while buffer[*cursor] != b'e' {
         let key = parse_byte_string(buffer, cursor);
-        println!("key: {:?}", key);
+        // println!("key: {:?}", key);
 
-        let byte = buffer[*cursor] as char;
-        if byte.is_ascii_digit() {
-            let value = parse_byte_string(buffer, cursor);
-            println!("value: {:?}", value);
-        } else {
-            println!("cursor: {}", byte);
-            todo!();
+        let byte = buffer[*cursor];
+        match byte {
+            b'i' => {
+                let value = parse_int(buffer, cursor);
+                // println!("value: {:?}", value);
+                dict.insert(key, BencodeType::Integer(value));
+            },
+            b'l' => {
+                let value = parse_list(buffer, cursor);
+                // println!("value: {:?}", value);
+                dict.insert(key, BencodeType::List(value));
+            },
+            b'd' => {
+                let value = parse_dict(buffer, cursor);
+                dict.insert(key, BencodeType::Dict(value));
+            },
+            _ => {
+                if byte.is_ascii_digit() {
+                    let value = parse_byte_string(buffer, cursor);
+                    // println!("value: {:?}", value);
+                    dict.insert(key, BencodeType::ByteString(value));
+                } else {
+                    println!("cursor: {}", byte as char);
+                    todo!();
+                }
+            }
         }
-        println!("cursor: {}", byte);
     }
+
+    println!("dict consuming {}", buffer[*cursor] as char);
+    *cursor += 1; // consume 'e'
+    dict
 }
 
 
@@ -98,11 +160,17 @@ fn main() {
 
     while cursor < buffer.len() {
         let byte = buffer[cursor];
-        if byte == b'd' {
-            println!("dict found at position {cursor}:");
-            parse_dict(&buffer, &mut cursor);
-            break;
+        match byte {
+            b'd' => {
+                println!("dict found at position {cursor}:");
+                let dict = parse_dict(&buffer, &mut cursor);
+                println!("dict parsed: {:?}", dict);
+                println!("last pos: {}", buffer[cursor] as char);
+            },
+            _ => {
+                println!("byte {} found at pos {}", buffer[cursor] as char, cursor);
+                todo!();
+            }
         }
-        cursor += 1;
     }
 }
