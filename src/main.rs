@@ -12,7 +12,7 @@ enum BencodeType {
     ByteString(Vec<u8>)
 }
 
-fn byte_string_to_string(byte_string: &Vec<u8>) -> String {
+fn byte_string_to_string(byte_string: &[u8]) -> String {
     String::from_utf8(byte_string.to_vec()).expect("ERROR: unable to transform byte_string to string")
 }
 
@@ -148,6 +148,33 @@ fn parse_dict(buffer: &[u8], cursor: &mut usize) -> HashMap<String, BencodeType>
     dict
 }
 
+fn print_bencode_item(key: &String, item: &BencodeType) {
+    match item {
+        BencodeType::ByteString(byte_string) => {
+            // pieces = SHA1 hashes not parsable into UTF-8 string
+            if key != "pieces" {
+                print!("{key}: ");
+                let item = byte_string_to_string(byte_string);
+                println!("{}", item);
+            }
+        }, 
+        BencodeType::Integer(i) => {
+            print!("{key}: ");
+            println!("{}", i);
+        },
+        BencodeType::List(list) => {
+            for list_item in list {
+                print_bencode_item(key, list_item);
+            }
+        },
+        BencodeType::Dict(dict) => {
+            for (key, value) in dict.iter() {
+                print_bencode_item(key, value);
+            }
+        }
+    }
+}
+
 fn parse_torrent_file(buffer: &[u8]) {
     let mut cursor: usize = 0;
     let mut metainfo: HashMap<String, BencodeType>;
@@ -158,8 +185,9 @@ fn parse_torrent_file(buffer: &[u8]) {
             b'd' => {
                 metainfo = parse_dict(buffer, &mut cursor);
                 // println!("{:?}", metainfo);
-                let announce = metainfo.get("announce").unwrap();
-                println!("Tracker URL: {:?}", announce);
+                for (key, item) in metainfo.iter() {
+                    print_bencode_item(key, item);
+                }
             },
             b'\n' => {
                 println!("File parsed.");
