@@ -30,7 +30,6 @@ fn parse_byte_string(buffer: &[u8], cursor: &mut usize) -> String {
         acc * 10 + (byte - b'0') as usize
     });
 
-    let byte = buffer[*cursor] as char;
     let result = String::from_utf8(buffer[*cursor..(*cursor +len)].to_vec()).unwrap_or_default();
     *cursor += len;
 
@@ -144,6 +143,31 @@ fn parse_dict(buffer: &[u8], cursor: &mut usize) -> HashMap<String, BencodeType>
     dict
 }
 
+fn parse_torrent_file(buffer: &[u8]) {
+    let mut cursor: usize = 0;
+    let mut metainfo: HashMap<String, BencodeType>;
+
+    while cursor < buffer.len() {
+        let byte = buffer[cursor];
+        match byte {
+            b'd' => {
+                metainfo = parse_dict(buffer, &mut cursor);
+                // println!("{:?}", metainfo);
+                let announce = metainfo.get("announce").unwrap();
+                println!("Tracker URL: {:?}", announce);
+            },
+            b'\n' => {
+                println!("File parsed.");
+                break;
+            },
+            _ => {
+                panic!("ERROR: unknown byte {byte} found at pos {cursor}");
+            }
+        }
+    }
+
+}
+
 
 fn main() {
     let file_path = "ubuntu-20.04.6-desktop-amd64.iso.torrent";
@@ -152,24 +176,5 @@ fn main() {
     let mut buffer = Vec::new();
 
     file.read_to_end(&mut buffer).expect("ERROR: failed to read the torrent file");
-
-    let mut cursor: usize = 0;
-
-    while cursor < buffer.len() {
-        let byte = buffer[cursor];
-        match byte {
-            b'd' => {
-                println!("dict found at position {cursor}:");
-                let dict = parse_dict(&buffer, &mut cursor);
-                println!("dict parsed: {:?}", dict);
-            },
-            b'\n' => {
-                println!("File parsed.");
-                break;
-            },
-            _ => {
-                println!("unkown byte {} found at pos {}", buffer[cursor], cursor);
-            }
-        }
-    }
+    parse_torrent_file(&buffer)
 }
